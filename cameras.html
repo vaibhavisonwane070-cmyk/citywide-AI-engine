@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Camera Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h3 mb-0 text-white fw-bold">Camera Network Management</h1>
+            <p class="text-secondary small mb-0">Register, configure, and monitor optical ANPR sensor nodes</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-cyber" data-bs-toggle="modal" data-bs-target="#cameraModal" onclick="openAddCameraModal()">
+                <i class="bi bi-plus-lg"></i> Register New Camera
+            </button>
+            <button class="btn btn-cyber-dark" onclick="loadCameras()" title="Refresh List">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Camera Stats Overview Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="kpi-card">
+                <div class="kpi-data">
+                    <span class="kpi-label">Total Sensor Nodes</span>
+                    <span class="kpi-value" id="cam-stat-total">--</span>
+                    <span class="kpi-trend text-info">Registered Grid Units</span>
+                </div>
+                <div class="kpi-icon-wrapper text-info"><i class="bi bi-webcam"></i></div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="kpi-card kpi-success">
+                <div class="kpi-data">
+                    <span class="kpi-label">Online / Ready</span>
+                    <span class="kpi-value text-success" id="cam-stat-ready">--</span>
+                    <span class="kpi-trend text-success"><i class="bi bi-check-circle"></i> Ingest Ready</span>
+                </div>
+                <div class="kpi-icon-wrapper text-success"><i class="bi bi-broadcast"></i></div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="kpi-card">
+                <div class="kpi-data">
+                    <span class="kpi-label">Processing</span>
+                    <span class="kpi-value text-info" id="cam-stat-processing">--</span>
+                    <span class="kpi-trend text-info"><i class="bi bi-gear-wide-connected"></i> Active Pipeline</span>
+                </div>
+                <div class="kpi-icon-wrapper text-info"><i class="bi bi-cpu"></i></div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="kpi-card kpi-danger">
+                <div class="kpi-data">
+                    <span class="kpi-label">Offline / Fault</span>
+                    <span class="kpi-value text-danger" id="cam-stat-offline">--</span>
+                    <span class="kpi-trend text-danger"><i class="bi bi-exclamation-triangle"></i> Maintenance Req.</span>
+                </div>
+                <div class="kpi-icon-wrapper text-danger"><i class="bi bi-slash-circle"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cameras Table Card -->
+    <div class="cyber-card mb-4">
+        <div class="cyber-card-header">
+            <h2 class="cyber-card-title">
+                <i class="bi bi-list-columns-reverse"></i> Metropolitan ANPR Nodes
+            </h2>
+            <div class="d-flex align-items-center gap-2">
+                <input type="text" id="cameraFilterInput" class="form-control form-control-sm" placeholder="Filter by Name, ID, or Location..." oninput="filterCameraTable()">
+                <select id="cameraStatusFilter" class="form-select form-select-sm" onchange="filterCameraTable()" style="width: 140px;">
+                    <option value="ALL">All Statuses</option>
+                    <option value="READY">READY</option>
+                    <option value="PROCESSING">PROCESSING</option>
+                    <option value="OFFLINE">OFFLINE</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table-cyber">
+                <thead>
+                    <tr>
+                        <th>Node ID</th>
+                        <th>Junction / Name</th>
+                        <th>Geographic Location</th>
+                        <th>Direction</th>
+                        <th>GPS Coordinates</th>
+                        <th>Stream Mode</th>
+                        <th>Detections</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="camerasTableBody">
+                    <tr>
+                        <td colspan="9" class="text-center py-4 text-muted">
+                            <div class="spinner-border spinner-border-sm text-info mb-2"></div>
+                            <div>Loading camera nodes...</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add / Edit Camera Modal -->
+<div class="modal fade" id="cameraModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-white" id="cameraModalTitle">
+                    <i class="bi bi-webcam me-2 text-cyan"></i> Register New Camera Node
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="cameraForm" onsubmit="handleCameraFormSubmit(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="cameraEditMode" value="add">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="inputCameraId" class="form-label">Camera ID *</label>
+                            <input type="text" class="form-control mono text-uppercase" id="inputCameraId" placeholder="e.g. CAM-13" required>
+                        </div>
+                        <div class="col-md-8">
+                            <label for="inputCameraName" class="form-label">Node / Junction Name *</label>
+                            <input type="text" class="form-control" id="inputCameraName" placeholder="e.g. Shivaji Nagar Junction Flyover" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="inputCameraLocation" class="form-label">Address / Landmark *</label>
+                            <input type="text" class="form-control" id="inputCameraLocation" placeholder="e.g. Old Pune-Mumbai Hwy & JM Rd" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="inputCameraDirection" class="form-label">Traffic Direction</label>
+                            <select class="form-select" id="inputCameraDirection">
+                                <option value="Northbound">Northbound</option>
+                                <option value="Southbound">Southbound</option>
+                                <option value="Eastbound">Eastbound</option>
+                                <option value="Westbound">Westbound</option>
+                                <option value="Bi-directional">Bi-directional</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="inputCameraStatus" class="form-label">Status</label>
+                            <select class="form-select" id="inputCameraStatus">
+                                <option value="READY">READY</option>
+                                <option value="PROCESSING">PROCESSING</option>
+                                <option value="OFFLINE">OFFLINE</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-2">
+                        <div class="col-md-6">
+                            <label for="inputCameraLat" class="form-label">Latitude *</label>
+                            <input type="number" step="any" class="form-control mono" id="inputCameraLat" placeholder="18.5204" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="inputCameraLng" class="form-label">Longitude *</label>
+                            <input type="number" step="any" class="form-control mono" id="inputCameraLng" placeholder="73.8567" required>
+                        </div>
+                    </div>
+
+                    <div class="small text-muted mb-2">
+                        <i class="bi bi-info-circle text-info"></i> Click anywhere on the map below to automatically pin GPS coordinates:
+                    </div>
+                    <div id="cameraPickerMap" style="height: 220px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-cyber-dark" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-cyber" id="btnSaveCamera">
+                        <i class="bi bi-check2-circle"></i> Save Camera Node
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Camera View Detail Modal -->
+<div class="modal fade" id="cameraDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-white">
+                    <i class="bi bi-info-circle me-2 text-info"></i> Camera Details & Telemetry
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="cameraDetailBody">
+                <div class="text-center py-4 text-muted">
+                    <div class="spinner-border spinner-border-sm text-info"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a href="#" id="detailUploadBtn" class="btn btn-cyber me-auto">
+                    <i class="bi bi-cloud-arrow-up"></i> Upload Media to Node
+                </a>
+                <button type="button" class="btn btn-cyber-dark" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/cameras.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Watchlist & High-Interest Alerts{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h3 mb-0 text-white fw-bold">Watchlist & High-Interest Alert Center</h1>
+            <p class="text-secondary small mb-0">Automated multi-camera threat detection, BOLO notifications, and anomalous trajectory alerts</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-cyber" data-bs-toggle="modal" data-bs-target="#watchlistModal">
+                <i class="bi bi-shield-plus"></i> Manage Watchlist
+            </button>
+            <button class="btn btn-cyber-dark" onclick="loadAlerts()" title="Refresh Alerts">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Severity Metric Counters -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-sm-6">
+            <div class="kpi-card kpi-danger">
+                <div class="kpi-data">
+                    <span class="kpi-label">Critical Severity</span>
+                    <span class="kpi-value text-danger" id="countCritical">--</span>
+                    <span class="kpi-trend text-danger"><i class="bi bi-exclamation-octagon-fill"></i> Immediate Action</span>
+                </div>
+                <div class="kpi-icon-wrapper text-danger"><i class="bi bi-shield-fill-x"></i></div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-sm-6">
+            <div class="kpi-card kpi-warning">
+                <div class="kpi-data">
+                    <span class="kpi-label">High Severity</span>
+                    <span class="kpi-value text-warning" id="countHigh">--</span>
+                    <span class="kpi-trend text-warning"><i class="bi bi-exclamation-triangle-fill"></i> Intercept Monitoring</span>
+                </div>
+                <div class="kpi-icon-wrapper text-warning"><i class="bi bi-shield-fill-exclamation"></i></div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-sm-6">
+            <div class="kpi-card">
+                <div class="kpi-data">
+                    <span class="kpi-label">Medium & Low</span>
+                    <span class="kpi-value text-info" id="countMedLow">--</span>
+                    <span class="kpi-trend text-info"><i class="bi bi-info-circle-fill"></i> Anomaly & Route Flags</span>
+                </div>
+                <div class="kpi-icon-wrapper text-info"><i class="bi bi-shield-fill-check"></i></div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-sm-6">
+            <div class="kpi-card kpi-success">
+                <div class="kpi-data">
+                    <span class="kpi-label">Acknowledged</span>
+                    <span class="kpi-value text-success" id="countAck">--</span>
+                    <span class="kpi-trend text-success"><i class="bi bi-check2-all"></i> Operator Reviewed</span>
+                </div>
+                <div class="kpi-icon-wrapper text-success"><i class="bi bi-clipboard2-check-fill"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts Table Card -->
+    <div class="cyber-card mb-4">
+        <div class="cyber-card-header">
+            <h2 class="cyber-card-title">
+                <i class="bi bi-bell-fill text-danger"></i> Automated Security Alert Stream
+            </h2>
+            <div class="d-flex align-items-center gap-2">
+                <select id="alertStatusFilter" class="form-select form-select-sm" onchange="loadAlerts()" style="width: 160px;">
+                    <option value="ALL">All Alert Records</option>
+                    <option value="Active" selected>Active Alerts Only</option>
+                    <option value="Acknowledged">Acknowledged</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table-cyber">
+                <thead>
+                    <tr>
+                        <th>Severity</th>
+                        <th>Alert Classification</th>
+                        <th>Target Plate</th>
+                        <th>Camera Node</th>
+                        <th>Location</th>
+                        <th>Timestamp</th>
+                        <th>AI Confidence</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="alertsTableBody">
+                    <tr>
+                        <td colspan="9" class="text-center py-4 text-muted">
+                            <div class="spinner-border spinner-border-sm text-info mb-2"></div>
+                            <div>Querying security alerts...</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Watchlist Management Modal -->
+<div class="modal fade" id="watchlistModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-white">
+                    <i class="bi bi-shield-lock-fill text-danger me-2"></i> Watchlist Registry Management
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Add to Watchlist Form -->
+                <form id="addWatchlistForm" onsubmit="handleAddWatchlist(event)" class="mb-4 p-3 rounded bg-dark border border-secondary border-opacity-25">
+                    <h6 class="text-white fw-bold mb-2"><i class="bi bi-plus-circle me-1 text-cyan"></i> Monitor Target Registration Plate</h6>
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label for="wlPlate" class="form-label small">Target Plate *</label>
+                            <input type="text" class="form-control form-control-sm mono text-uppercase" id="wlPlate" placeholder="e.g. MH12AB9999" required>
+                        </div>
+                        <div class="col-md-5">
+                            <label for="wlReason" class="form-label small">Reason / Flag *</label>
+                            <input type="text" class="form-control form-control-sm" id="wlReason" placeholder="e.g. Stolen Vehicle, Suspicious Corridor" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="wlSeverity" class="form-label small">Severity</label>
+                            <select class="form-select form-select-sm" id="wlSeverity">
+                                <option value="Critical">Critical</option>
+                                <option value="High" selected>High</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Low">Low</option>
+                            </select>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <button type="submit" class="btn btn-sm btn-cyber w-100">
+                                <i class="bi bi-shield-plus"></i> Add Plate to Active Watchlist
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Current Watchlist Table -->
+                <h6 class="text-white fw-bold mb-2"><i class="bi bi-list-check me-1 text-info"></i> Monitored Targets</h6>
+                <div class="table-responsive" style="max-height: 240px; overflow-y: auto;">
+                    <table class="table table-sm table-cyber small mb-0">
+                        <thead>
+                            <tr>
+                                <th>Plate</th>
+                                <th>Reason</th>
+                                <th>Severity</th>
+                                <th>Added Date</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="watchlistTableBody">
+                            <tr><td colspan="5" class="text-center py-3 text-muted">Loading targets...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-cyber-dark" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/alerts.js') }}"></script>
+{% endblock %}

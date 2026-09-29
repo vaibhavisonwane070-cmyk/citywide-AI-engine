@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Command Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Header Title Bar -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h3 mb-0 text-white fw-bold">Urban Traffic Intelligence Command Center</h1>
+            <p class="text-secondary small mb-0">City-Wide Multi-Camera ANPR Sensor Grid &bull; Live Telemetry Feed</p>
+        </div>
+        <div class="d-flex gap-2 align-items-center mt-2 mt-md-0">
+            <a href="{{ url_for('upload_page') }}" class="btn btn-cyber">
+                <i class="bi bi-cloud-arrow-up"></i> Upload Media Ingest
+            </a>
+            <a href="{{ url_for('search_page') }}" class="btn btn-cyber-outline">
+                <i class="bi bi-search"></i> Vehicle Search
+            </a>
+            <button class="btn btn-cyber-dark" onclick="loadDashboardData()" title="Refresh Telemetry">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Metric Cards Grid -->
+    <div class="row g-3 mb-4">
+        <!-- 1. Active Cameras -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="kpi-card kpi-success">
+                <div class="kpi-data">
+                    <span class="kpi-label">Active Cameras</span>
+                    <span class="kpi-value" id="kpi-cameras">-- / --</span>
+                    <span class="kpi-trend text-success"><i class="bi bi-broadcast"></i> Ingest Mode</span>
+                </div>
+                <div class="kpi-icon-wrapper text-success">
+                    <i class="bi bi-webcam-fill"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Videos / Captures Processed -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="kpi-card">
+                <div class="kpi-data">
+                    <span class="kpi-label">Feeds Processed</span>
+                    <span class="kpi-value" id="kpi-videos">--</span>
+                    <span class="kpi-trend text-info"><i class="bi bi-film"></i> Upload + Ingest</span>
+                </div>
+                <div class="kpi-icon-wrapper text-info">
+                    <i class="bi bi-cpu-fill"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Vehicles Detected -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="kpi-card">
+                <div class="kpi-data">
+                    <span class="kpi-label">Vehicles Detected</span>
+                    <span class="kpi-value" id="kpi-vehicles">--</span>
+                    <span class="kpi-trend text-cyan"><i class="bi bi-arrow-up-right"></i> Total Crossings</span>
+                </div>
+                <div class="kpi-icon-wrapper" style="color: var(--accent-cyan);">
+                    <i class="bi bi-car-front-fill"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Unique Plates -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="kpi-card kpi-purple">
+                <div class="kpi-data">
+                    <span class="kpi-label">Unique Plates</span>
+                    <span class="kpi-value" id="kpi-plates">--</span>
+                    <span class="kpi-trend text-primary"><i class="bi bi-fingerprint"></i> Tracked Targets</span>
+                </div>
+                <div class="kpi-icon-wrapper" style="color: var(--accent-purple);">
+                    <i class="bi bi-card-text"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Active Alerts -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="kpi-card kpi-danger">
+                <div class="kpi-data">
+                    <span class="kpi-label">Active Alerts</span>
+                    <span class="kpi-value text-danger" id="kpi-alerts">--</span>
+                    <span class="kpi-trend text-danger"><i class="bi bi-exclamation-octagon-fill"></i> High Priority</span>
+                </div>
+                <div class="kpi-icon-wrapper text-danger">
+                    <i class="bi bi-bell-fill"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Average OCR Confidence -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="kpi-card kpi-warning">
+                <div class="kpi-data">
+                    <span class="kpi-label">Avg OCR Conf.</span>
+                    <span class="kpi-value text-warning" id="kpi-ocr">--</span>
+                    <span class="kpi-trend text-warning"><i class="bi bi-check-circle"></i> Recognition</span>
+                </div>
+                <div class="kpi-icon-wrapper text-warning">
+                    <i class="bi bi-bullseye"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Command Center Grid: Map (Left) & Live Detections (Right) -->
+    <div class="row g-3 mb-4">
+        <!-- GIS Map (Left) -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="cyber-card h-100">
+                <div class="cyber-card-header">
+                    <h2 class="cyber-card-title">
+                        <i class="bi bi-map-fill"></i> Metropolitan Camera Grid GIS Map
+                    </h2>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-dark text-cyan border border-info border-opacity-25 small">
+                            <i class="bi bi-pin-map-fill me-1"></i> Interactive Node View
+                        </span>
+                        <button class="btn btn-sm btn-cyber-dark py-0 px-2" onclick="centerMapOnGrid()" title="Center Map">
+                            <i class="bi bi-crosshair"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="cyber-card-body p-0">
+                    <div id="dashboardMap" class="map-container" style="height: 480px;"></div>
+                </div>
+                <div class="p-2 px-3 border-top border-secondary border-opacity-25 d-flex justify-content-between align-items-center small text-muted">
+                    <div>
+                        <span class="me-3"><i class="bi bi-circle-fill text-success small"></i> Ready / Ingest</span>
+                        <span class="me-3"><i class="bi bi-circle-fill text-info small"></i> Processing</span>
+                        <span><i class="bi bi-circle-fill text-danger small"></i> Offline</span>
+                    </div>
+                    <div>
+                        <span>Click any camera marker to inspect real-time metrics</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent ANPR Detections Live Stream (Right) -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="cyber-card h-100 d-flex flex-direction-column">
+                <div class="cyber-card-header">
+                    <h2 class="cyber-card-title">
+                        <i class="bi bi-activity text-warning"></i> Recent ANPR Detections
+                    </h2>
+                    <a href="{{ url_for('detections_page') }}" class="btn btn-sm btn-cyber-outline py-0 px-2" style="font-size: 0.75rem;">
+                        View All <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="cyber-card-body p-0 flex-grow-1" style="max-height: 480px; overflow-y: auto;" id="recentDetectionsList">
+                    <div class="p-4 text-center text-muted">
+                        <div class="spinner-border spinner-border-sm text-info mb-2" role="status"></div>
+                        <p class="small mb-0">Loading telemetry feed...</p>
+                    </div>
+                </div>
+                <div class="p-2 border-top border-secondary border-opacity-25 text-center small text-muted">
+                    <i class="bi bi-arrow-repeat me-1"></i> Telemetry updates dynamically
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Charts Row (Bottom) -->
+    <div class="row g-3">
+        <!-- Chart 1: Hourly Traffic Volume -->
+        <div class="col-xl-4 col-lg-6">
+            <div class="cyber-card">
+                <div class="cyber-card-header">
+                    <h3 class="cyber-card-title">
+                        <i class="bi bi-clock-history"></i> Hourly Traffic Volume
+                    </h3>
+                    <span class="badge bg-dark text-muted small">24-Hour Cycle</span>
+                </div>
+                <div class="cyber-card-body">
+                    <div style="height: 220px;">
+                        <canvas id="chartHourlyTraffic"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 2: Vehicle Type Distribution -->
+        <div class="col-xl-4 col-lg-6">
+            <div class="cyber-card">
+                <div class="cyber-card-header">
+                    <h3 class="cyber-card-title">
+                        <i class="bi bi-pie-chart-fill"></i> Vehicle Classification
+                    </h3>
+                    <span class="badge bg-dark text-muted small">Detected Classes</span>
+                </div>
+                <div class="cyber-card-body">
+                    <div style="height: 220px;">
+                        <canvas id="chartVehicleTypes"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 3: Camera Sensor Activity -->
+        <div class="col-xl-4 col-lg-12">
+            <div class="cyber-card">
+                <div class="cyber-card-header">
+                    <h3 class="cyber-card-title">
+                        <i class="bi bi-bar-chart-fill"></i> Busiest Camera Corridors
+                    </h3>
+                    <span class="badge bg-dark text-muted small">Top Crossings</span>
+                </div>
+                <div class="cyber-card-body">
+                    <div style="height: 220px;">
+                        <canvas id="chartCameraActivity"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Camera Quick Inspect Modal -->
+<div class="modal fade" id="cameraInspectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-white">
+                    <i class="bi bi-webcam me-2 text-cyan"></i> Camera Node Telemetry
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="cameraInspectBody">
+                <!-- Dynamically filled -->
+            </div>
+            <div class="modal-footer">
+                <a href="{{ url_for('upload_page') }}" class="btn btn-cyber me-auto">
+                    <i class="bi bi-cloud-arrow-up"></i> Upload to this Camera
+                </a>
+                <button type="button" class="btn btn-cyber-dark" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

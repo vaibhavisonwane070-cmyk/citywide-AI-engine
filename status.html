@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}System Diagnostics & Health{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h3 mb-0 text-white fw-bold">System Infrastructure & AI Health Monitor</h1>
+            <p class="text-secondary small mb-0">Operational telemetry, micro-service status, and computational engine latency</p>
+        </div>
+        <div>
+            <button class="btn btn-cyber" onclick="loadSystemStatus()">
+                <i class="bi bi-arrow-clockwise"></i> Ping Diagnostics
+            </button>
+        </div>
+    </div>
+
+    <!-- Benchmark Disclaimer Banner -->
+    <div class="p-3 mb-4 rounded bg-dark border border-info border-opacity-25 d-flex justify-content-between align-items-center">
+        <div>
+            <span class="badge bg-info text-dark fw-bold me-2">BENCHMARK DISCLAIMER</span>
+            <span class="text-secondary small">
+                Latency scores and micro-service statuses are validated via local health pings &bull; Simulated benchmarks marked clearly for prototype demonstration.
+            </span>
+        </div>
+        <div class="text-end d-none d-md-block">
+            <span class="badge bg-dark border border-secondary border-opacity-50 text-success small mono" id="statusLastPing">
+                Ping: 1.2ms
+            </span>
+        </div>
+    </div>
+
+    <!-- Overall Core Engines Grid -->
+    <div class="row g-3 mb-4" id="systemComponentsGrid">
+        <div class="col-12 text-center py-4 text-muted">
+            <div class="spinner-border spinner-border-sm text-info mb-2"></div>
+            <div>Pinging engine components...</div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/status.js') }}"></script>
+{% endblock %}

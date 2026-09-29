@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Multi-Camera Trajectory Reconstruction{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h3 mb-0 text-white fw-bold">Multi-Camera GIS Trajectory Reconstruction</h1>
+            <p class="text-secondary small mb-0">Chronological spatial reconstruction of vehicle transit path across metropolitan sensor nodes</p>
+        </div>
+        <div>
+            <span class="badge bg-warning text-dark px-3 py-2 fw-bold">
+                <i class="bi bi-shield-exclamation me-1"></i> Prototype Trajectory Reconstruction
+            </span>
+        </div>
+    </div>
+
+    <!-- Search Target Plate Bar -->
+    <div class="cyber-card mb-4">
+        <div class="cyber-card-body p-3">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-dark border-secondary border-opacity-50 text-cyan mono">
+                            <i class="bi bi-crosshair"></i> Target Plate:
+                        </span>
+                        <input type="text" class="form-control mono text-uppercase fw-bold" id="trajectoryTargetInput" value="{{ initial_plate }}" placeholder="e.g. MH12DEMO01">
+                        <button class="btn btn-cyber" type="button" onclick="loadTrajectoryForInput()">
+                            <i class="bi bi-play-circle"></i> Track
+                        </button>
+                    </div>
+                </div>
+
+                <div class="col-md-7 d-flex flex-wrap gap-2 justify-content-md-end align-items-center">
+                    <span class="small text-muted">Demo Targets:</span>
+                    <button class="btn btn-sm btn-cyber-dark" onclick="setTargetPlate('MH12DEMO01')">
+                        <span class="plate-badge plate-badge-sm me-1">MH12DEMO01</span> (6 Nodes)
+                    </button>
+                    <button class="btn btn-sm btn-cyber-dark" onclick="setTargetPlate('MH14TEST02')">
+                        <span class="plate-badge plate-badge-sm me-1">MH14TEST02</span> (4 Nodes)
+                    </button>
+                    <button class="btn btn-sm btn-cyber-dark" onclick="setTargetPlate('MH13DEMO03')">
+                        <span class="plate-badge plate-badge-sm me-1">MH13DEMO03</span> (4 Nodes)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Grid: GIS Map (Left) & Chronological Timeline (Right) -->
+    <div class="row g-3">
+        <!-- Leaflet Route Reconstruction Map -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="cyber-card h-100">
+                <div class="cyber-card-header">
+                    <h2 class="cyber-card-title">
+                        <i class="bi bi-geo-alt-fill text-cyan"></i> Reconstructed GIS Transit Corridor
+                    </h2>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-dark border border-secondary border-opacity-50 text-white small mono" id="trajectoryRouteBadge">
+                            Camera A &rarr; Camera B &rarr; Camera C
+                        </span>
+                        <button class="btn btn-sm btn-cyber-dark py-0 px-2" onclick="fitTrajectoryBounds()" title="Fit Route in View">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="cyber-card-body p-0">
+                    <div id="trajectoryMap" class="map-container" style="height: 560px;"></div>
+                </div>
+                <div class="p-2 px-3 border-top border-secondary border-opacity-25 d-flex justify-content-between align-items-center small text-muted">
+                    <div>
+                        <span class="text-info"><i class="bi bi-bezier2 me-1"></i> Directional Vector Path: Sequence 1 to N</span>
+                    </div>
+                    <div>
+                        <span class="badge bg-dark text-muted">Subject to optical sensor coverage &bull; Non-probabilistic</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chronological Transit Timeline & Summary Metrics -->
+        <div class="col-xl-4 col-lg-5">
+            <!-- Trajectory Metrics Card -->
+            <div class="cyber-card mb-3">
+                <div class="cyber-card-header py-2">
+                    <h3 class="cyber-card-title fs-6">
+                        <i class="bi bi-speedometer2 text-info"></i> Transit Corridor Metrics
+                    </h3>
+                </div>
+                <div class="cyber-card-body p-3" id="trajectoryMetricsBox">
+                    <div class="row g-2 text-center">
+                        <div class="col-4">
+                            <div class="p-2 rounded bg-dark border border-secondary border-opacity-25">
+                                <small class="text-muted d-block">Transit Time</small>
+                                <strong class="text-white mono" id="metricTime">--</strong>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-2 rounded bg-dark border border-secondary border-opacity-25">
+                                <small class="text-muted d-block">Corridor Dist.</small>
+                                <strong class="text-cyan mono" id="metricDistance">-- km</strong>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-2 rounded bg-dark border border-secondary border-opacity-25">
+                                <small class="text-muted d-block">Est. Avg Speed</small>
+                                <strong class="text-warning mono" id="metricSpeed">-- km/h</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chronological Timeline Card -->
+            <div class="cyber-card">
+                <div class="cyber-card-header">
+                    <h3 class="cyber-card-title fs-6">
+                        <i class="bi bi-clock-history text-cyan"></i> Detection Node Sequence
+                    </h3>
+                    <span class="badge bg-secondary small" id="hopCountBadge">0 Hops</span>
+                </div>
+                <div class="cyber-card-body p-3" style="max-height: 420px; overflow-y: auto;">
+                    <div class="trajectory-timeline" id="trajectoryTimelineList">
+                        <div class="text-center py-4 text-muted">
+                            <div class="spinner-border spinner-border-sm text-info mb-2"></div>
+                            <div>Reconstructing path...</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-2 border-top border-secondary border-opacity-25 text-center small text-muted">
+                    <i class="bi bi-info-circle me-1"></i> Elapsed hop duration calculated from sequential ANPR timestamps
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/trajectory.js') }}"></script>
+{% endblock %}

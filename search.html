@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Vehicle Intelligence Search{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h3 mb-0 text-white fw-bold">Vehicle Intelligence Search</h1>
+            <p class="text-secondary small mb-0">Search historical optical detection events across the metropolitan camera sensor network</p>
+        </div>
+        <div>
+            <span class="badge bg-dark text-cyan border border-info border-opacity-25 px-3 py-2">
+                <i class="bi bi-shield-check me-1"></i> Multi-Camera Telemetry Index
+            </span>
+        </div>
+    </div>
+
+    <!-- Search Filters Card -->
+    <div class="cyber-card mb-4">
+        <div class="cyber-card-header">
+            <h2 class="cyber-card-title">
+                <i class="bi bi-funnel-fill"></i> Intelligence Query Filters
+            </h2>
+            <!-- Quick Demo Plate Selector Chips -->
+            <div class="d-flex align-items-center gap-2">
+                <span class="small text-muted d-none d-md-inline">Quick Query Target:</span>
+                <button type="button" class="btn btn-sm btn-cyber-dark py-0" onclick="quickFillSearch('MH12DEMO01')">
+                    <span class="plate-badge plate-badge-sm">MH12DEMO01</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-cyber-dark py-0" onclick="quickFillSearch('MH14TEST02')">
+                    <span class="plate-badge plate-badge-sm">MH14TEST02</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-cyber-dark py-0" onclick="quickFillSearch('MH13DEMO03')">
+                    <span class="plate-badge plate-badge-sm">MH13DEMO03</span>
+                </button>
+            </div>
+        </div>
+        <div class="cyber-card-body">
+            <form id="vehicleSearchForm" onsubmit="handleSearchSubmit(event)">
+                <div class="row g-3">
+                    <div class="col-lg-4 col-md-6">
+                        <label for="searchPlate" class="form-label">License Plate Number</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary border-opacity-50 text-secondary mono">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" class="form-control mono text-uppercase" id="searchPlate" placeholder="e.g. MH12DEMO01 or MH12" value="{{ initial_plate }}">
+                        </div>
+                    </div>
+
+                    <div class="col-lg-3 col-md-6">
+                        <label for="searchCamera" class="form-label">Camera Node</label>
+                        <select class="form-select" id="searchCamera">
+                            <option value="ALL">All Cameras (City-Wide)</option>
+                            {% for c in cameras %}
+                            <option value="{{ c.camera_id }}">[{{ c.camera_id }}] {{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-lg-3 col-md-6">
+                        <label for="searchVehicleType" class="form-label">Vehicle Classification</label>
+                        <select class="form-select" id="searchVehicleType">
+                            <option value="ALL">All Vehicle Types</option>
+                            <option value="Sedan">Sedan</option>
+                            <option value="SUV">SUV</option>
+                            <option value="Hatchback">Hatchback</option>
+                            <option value="Motorcycle">Motorcycle</option>
+                            <option value="Bus">Bus</option>
+                            <option value="Delivery Van">Delivery Van</option>
+                            <option value="Auto-rickshaw">Auto-rickshaw</option>
+                            <option value="Truck">Truck</option>
+                        </select>
+                    </div>
+
+                    <div class="col-lg-2 col-md-6 d-flex align-items-end">
+                        <button type="submit" class="btn btn-cyber w-100 py-2">
+                            <i class="bi bi-search"></i> Execute Search
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Search Results View -->
+    <div id="searchResultsSection">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="h5 text-white mb-0">
+                <i class="bi bi-card-checklist me-2 text-cyan"></i> Matching Target Vehicles
+                <span class="badge bg-secondary ms-2" id="resultsCountBadge">0</span>
+            </h3>
+        </div>
+
+        <div id="searchResultsContainer" class="row g-3">
+            <!-- Dynamically injected target vehicle cards -->
+            <div class="col-12 text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm text-info mb-2"></div>
+                <div>Searching intelligence records...</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/search.js') }}"></script>
+{% endblock %}

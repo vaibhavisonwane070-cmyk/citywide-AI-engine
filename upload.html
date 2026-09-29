@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Upload & Process Media{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Title and Ingest Notice -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h3 mb-0 text-white fw-bold">Camera Media Ingest & AI Pipeline</h1>
+            <p class="text-secondary small mb-0">Upload an image or video for OpenCV plate localization, OCR, and video tracking</p>
+        </div>
+        <div>
+            <span class="badge bg-dark text-warning border border-warning border-opacity-25 px-3 py-2">
+                <i class="bi bi-cpu-fill me-1"></i> AI Engine: {{ config.AI_MODE }} MODE
+            </span>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left: Upload Configuration & File Dropzone -->
+        <div class="col-lg-7">
+            <div class="cyber-card mb-4">
+                <div class="cyber-card-header">
+                    <h2 class="cyber-card-title">
+                        <i class="bi bi-cloud-arrow-up-fill"></i> 1. Select Camera & Upload Media
+                    </h2>
+                    <span class="badge bg-dark text-muted small">MP4, AVI, MOV, JPG, PNG</span>
+                </div>
+                <div class="cyber-card-body">
+                    <!-- Camera Selector -->
+                    <div class="mb-3">
+                        <label for="cameraSelect" class="form-label fw-semibold text-white">Target Camera Sensor Node *</label>
+                        <select class="form-select form-select-lg" id="cameraSelect">
+                            {% for cam in cameras %}
+                            <option value="{{ cam.camera_id }}">
+                                [{{ cam.camera_id }}] {{ cam.name }} ({{ cam.location }}) — {{ cam.status }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text text-muted">Select the physical camera junction where this media was captured.</div>
+                    </div>
+
+                    <!-- Drag & Drop Upload Zone -->
+                    <div class="dropzone-area mb-3" id="dropzone">
+                        <input type="file" id="fileInput" class="d-none" accept=".mp4,.avi,.mov,.mkv,.jpg,.jpeg,.png,.webp">
+                        <i class="bi bi-cloud-arrow-up dropzone-icon"></i>
+                        <h5 class="text-white fw-bold mb-1">Drag & Drop Video or Image Frame Here</h5>
+                        <p class="text-muted small mb-3">or browse from your local file system</p>
+                        <button type="button" class="btn btn-cyber-outline btn-sm px-4" onclick="document.getElementById('fileInput').click()">
+                            <i class="bi bi-folder2-open me-1"></i> Browse Files
+                        </button>
+                    </div>
+
+                    <!-- File Details Display -->
+                    <div id="fileInfoBox" class="p-3 mb-3 rounded bg-dark border border-secondary border-opacity-25 d-none">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="fs-2 text-cyan" id="fileIcon"><i class="bi bi-file-earmark-image"></i></div>
+                                <div>
+                                    <h6 class="text-white mb-0" id="fileName">file.jpg</h6>
+                                    <span class="small text-muted" id="fileSize">0 KB</span> &bull;
+                                    <span class="badge bg-secondary small" id="fileSourceBadge">Local File</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearSelectedFile()">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Action Button -->
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-cyber py-2 fs-6" id="btnStartPipeline" onclick="runProcessingPipeline()" disabled>
+                            <i class="bi bi-play-circle-fill"></i> Execute AI Pipeline Analysis
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Pipeline Execution & Live Results Display -->
+        <div class="col-lg-5">
+            <div class="cyber-card mb-4">
+                <div class="cyber-card-header">
+                    <h2 class="cyber-card-title">
+                        <i class="bi bi-cpu-fill"></i> 2. Pipeline Execution Telemetry
+                    </h2>
+                    <span class="badge bg-dark border border-secondary border-opacity-25 text-cyan mono" id="pipelineStatusBadge">STANDBY</span>
+                </div>
+                <div class="cyber-card-body">
+                    <!-- Progress Stepper -->
+                    <div class="stepper-pipeline">
+                        <div class="step-item" id="step1">
+                            <div class="step-circle"><i class="bi bi-upload"></i></div>
+                            <span class="step-label">Upload</span>
+                        </div>
+                        <div class="step-item" id="step2">
+                            <div class="step-circle"><i class="bi bi-camera"></i></div>
+                            <span class="step-label">OpenCV</span>
+                        </div>
+                        <div class="step-item" id="step3">
+                            <div class="step-circle"><i class="bi bi-bounding-box"></i></div>
+                            <span class="step-label">Vehicle Det.</span>
+                        </div>
+                        <div class="step-item" id="step4">
+                            <div class="step-circle"><i class="bi bi-card-text"></i></div>
+                            <span class="step-label">Plate OCR</span>
+                        </div>
+                        <div class="step-item" id="step5">
+                            <div class="step-circle"><i class="bi bi-database-check"></i></div>
+                            <span class="step-label">Store DB</span>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress mb-3 bg-dark" style="height: 6px;">
+                        <div class="progress-bar bg-info" id="pipelineProgressBar" role="progressbar" style="width: 0%;"></div>
+                    </div>
+
+                    <!-- Live Log Terminal Output -->
+                    <div class="p-3 mb-3 rounded bg-black mono small text-secondary" style="height: 110px; overflow-y: auto; font-size: 0.76rem; border: 1px solid rgba(56, 189, 248, 0.1);" id="pipelineLog">
+                        <div>[SYSTEM] Ready for media upload ingestion.</div>
+                        <div>[AI] Pipeline initialized in DEMO MODE.</div>
+                    </div>
+
+                    <!-- Detection Results Box (Hidden until execution complete) -->
+                    <div id="resultsCard" class="d-none">
+                        <div class="p-3 rounded bg-dark border border-info border-opacity-50">
+                            <!-- Alert Notice if Watchlist Triggered -->
+                            <div id="resultAlertBanner" class="alert alert-danger d-none py-2 mb-3" role="alert">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-shield-exclamation fs-4"></i>
+                                    <div>
+                                        <strong class="d-block" id="resultAlertTitle">WATCHLIST TARGET IDENTIFIED</strong>
+                                        <span class="small" id="resultAlertReason">Suspect vehicle matched criminal database.</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <span class="text-muted small d-block" id="resPlateLabel">Identified Registration Plate:</span>
+                                    <span class="plate-badge" id="resPlateNumber">MH12DEMO01</span>
+                                </div>
+                                <div class="text-end">
+                                    <span class="text-muted small d-block">Vehicle Type:</span>
+                                    <span class="badge bg-secondary fs-6 text-white" id="resVehicleType">Sedan</span>
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-3 small pt-2 border-top border-secondary border-opacity-25">
+                                <div class="col-6">
+                                    <span class="text-muted">OCR Confidence:</span>
+                                    <strong class="text-success ms-1" id="resOcrConf">97.8%</strong>
+                                </div>
+                                <div class="col-6">
+                                    <span class="text-muted">Plate Candidate:</span>
+                                    <strong class="text-info ms-1" id="resDetConf">96.5%</strong>
+                                </div>
+                                <div class="col-6">
+                                    <span class="text-muted">Processing Latency:</span>
+                                    <span class="text-white ms-1 mono" id="resLatency">48 ms</span>
+                                </div>
+                                <div class="col-6">
+                                    <span class="text-muted">Format Note:</span>
+                                    <span class="text-secondary ms-1" id="resFormatNote">Validated</span>
+                                </div>
+                            </div>
+
+                            <!-- Annotated Image Preview -->
+                            <div class="mb-3">
+                                <span class="small text-muted mb-1 d-block"><i class="bi bi-image"></i> Annotated Frame Preview:</span>
+                                <img id="resAnnotatedImg" src="" alt="Detection Preview" class="img-fluid rounded border border-secondary border-opacity-50 w-100" style="max-height: 240px; object-fit: contain; background: #000;">
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="d-flex gap-2">
+                                <a href="#" id="resTrackBtn" class="btn btn-cyber flex-grow-1 text-center">
+                                    <i class="bi bi-geo-alt-fill"></i> View GIS Trajectory
+                                </a>
+                                <a href="#" id="resSearchBtn" class="btn btn-cyber-outline text-center">
+                                    <i class="bi bi-search"></i> Intel Profile
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+{% endblock %}
